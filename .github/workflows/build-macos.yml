@@ -26,15 +26,15 @@ jobs:
 
       - name: Install Swift 6.2 toolchain
         run: |
-          if ! xcrun swift --version 2>/dev/null | grep -q "6.2"; then
+          set -e
+          if /usr/bin/xcrun swift --version 2>/dev/null | grep -q "Swift version 6.2"; then
+            echo "System Swift 6.2 already available"
+          else
             echo "Installing Swift 6.2 toolchain..."
             curl -fsSL "https://download.swift.org/swift-6.2-release/xcode/swift-6.2-RELEASE/swift-6.2-RELEASE-osx.pkg" -o /tmp/swift-6.2.pkg
             sudo installer -pkg /tmp/swift-6.2.pkg -target /
-            TOOLCHAIN=$(ls -d /Library/Developer/Toolchains/swift-6.2-RELEASE.xctoolchain 2>/dev/null || true)
-            if [ -n "$TOOLCHAIN" ]; then
-              sudo xcode-select --switch "$TOOLCHAIN"
-            fi
           fi
+          echo "TOOLCHAINS=swift-6.2-RELEASE" >> "$GITHUB_ENV"
           swift --version
 
       - name: Build
