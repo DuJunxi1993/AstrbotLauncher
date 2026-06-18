@@ -24,10 +24,10 @@ jobs:
           xcode-select -p
           xcodebuild -version
 
-      - name: Install Swift 6.2 toolchain
+      - name: Install Swift toolchain
         uses: swift-actions/setup-swift@v2
         with:
-          swift-version: '6.2'
+          swift-version: '6.3'
 
       - name: Build
         run: bash build.sh
