@@ -1,0 +1,43 @@
+name: Build Release (Windows/WSL)
+
+on:
+  push:
+    branches: [windows-wsl]
+    tags: ['windows-wsl-v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --windowed --icon=astrbot.ico --name Astrbot-Launcher-WSL Astrbot-Launcher-WSL.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Astrbot-Launcher-WSL
+          path: dist/Astrbot-Launcher-WSL.exe
+          if-no-files-found: error
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/windows-wsl-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Astrbot-Launcher-WSL.exe
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
