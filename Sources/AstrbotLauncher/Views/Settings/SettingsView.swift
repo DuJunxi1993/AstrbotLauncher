@@ -431,7 +431,7 @@ struct SettingsCard<Content: View>: View {
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(.clear)
-                    .glassEffect(.regular, in: .rect(cornerRadius: 14))
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14))
             )
         }
     }

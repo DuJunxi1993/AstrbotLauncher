@@ -69,7 +69,7 @@ struct InlineLogView: View {
                     .background(
                         Capsule()
                             .fill(.clear)
-                            .glassEffect(.regular, in: .capsule(style: .continuous))
+                            .glassEffect(.regular, in: Capsule(style: .continuous))
                     )
 
                     // 暂停/继续
@@ -155,7 +155,7 @@ struct InlineLogView: View {
         .background(
             RoundedRectangle(cornerRadius: isFullscreen ? 0 : 12, style: .continuous)
                 .fill(.clear)
-                .glassEffect(.clear, in: .rect(cornerRadius: isFullscreen ? 0 : 12))
+                .glassEffect(.clear, in: RoundedRectangle(cornerRadius: isFullscreen ? 0 : 12))
         )
         .padding(.horizontal, isFullscreen ? 0 : 16)
         .padding(.bottom, isFullscreen ? 0 : 8)

@@ -39,8 +39,8 @@ enum ProcessSpawner {
         var fileActionsPtr: UnsafePointer<posix_spawn_file_actions_t?>? = nil
         if let cwd = workingDirectory, !cwd.isEmpty {
             posix_spawn_file_actions_init(&fileActions)
-            if posix_spawn_file_actions_addchdir(&fileActions, cwd) != 0 {
-                AppLog.error("posix_spawn_file_actions_addchdir failed")
+            if posix_spawn_file_actions_addchdir_np(&fileActions, cwd) != 0 {
+                AppLog.error("posix_spawn_file_actions_addchdir_np failed")
                 return nil
             }
             fileActionsPtr = withUnsafePointer(to: &fileActions) { $0 }

@@ -113,7 +113,7 @@ struct ServiceDetailView: View {
         .background(
             RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous)
                 .fill(.clear)
-                .glassEffect(.regular.tint(serviceType.accentColor.opacity(0.08)), in: .rect(cornerRadius: Theme.cardRadius))
+                .glassEffect(.regular.tint(serviceType.accentColor.opacity(0.08)), in: RoundedRectangle(cornerRadius: Theme.cardRadius))
         )
         .padding(.horizontal, 16)
         .padding(.top, 16)
