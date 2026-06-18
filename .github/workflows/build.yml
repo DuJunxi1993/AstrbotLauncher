@@ -6,6 +6,9 @@ on:
     tags: ['windows-wsl-v*']
   workflow_dispatch:
 
+permissions:
+  contents: write   # required for softprops/action-gh-release to create a release
+
 jobs:
   build:
     runs-on: windows-latest
