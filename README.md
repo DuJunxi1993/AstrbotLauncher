@@ -31,6 +31,4 @@
 
 ## 许可
 
-各子项目分别遵循其分支内的 LICENSE 文件：
-- macOS 分支：仅供个人使用
-- windows-wsl 分支：[MIT License](https://opensource.org/licenses/MIT)
+本仓库及两个子项目均基于 [MIT License](LICENSE) 开源。详见 [`LICENSE`](LICENSE) 文件。
