@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,8 +18,23 @@ jobs:
       - name: Show toolchain
         run: |
           sw_vers
-          swift --version
           xcode-select -p
+          xcodebuild -version
+
+      - name: Install Swift 6.2 toolchain
+        run: |
+          # macos-15 has Swift 6.0; install 6.2 toolchain via xcode-select
+          if ! xcrun swift --version 2>/dev/null | grep -q "6.2"; then
+            echo "Installing Swift 6.2 toolchain..."
+            curl -fsSL "https://download.swift.org/swift-6.2-release/xcode/swift-6.2-RELEASE/swift-6.2-RELEASE-osx.pkg" -o /tmp/swift-6.2.pkg
+            sudo installer -pkg /tmp/swift-6.2.pkg -target /
+            # Find installed toolchain
+            TOOLCHAIN=$(ls -d /Library/Developer/Toolchains/swift-6.2-RELEASE.xctoolchain 2>/dev/null || true)
+            if [ -n "$TOOLCHAIN" ]; then
+              sudo xcode-select --switch "$TOOLCHAIN"
+            fi
+          fi
+          swift --version
 
       - name: Build
         run: bash build.sh
