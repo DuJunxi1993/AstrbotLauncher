@@ -67,4 +67,4 @@ AstrbotLauncher/
 
 ## 许可
 
-仅供个人使用。
+本项目基于 [MIT License](LICENSE) 开源。详见根目录的 `LICENSE` 文件。
