@@ -1,6 +1,7 @@
 # AstrBot Launcher
 
 一个 macOS 原生应用，用于集中启动、管理 AstrBot（通过 `uv` 部署）以及通过 `docker compose` 部署的 NapCat、Shipyard 等容器。
+<img width="927" height="651" alt="iShot_2026-06-22_13 15 48" src="https://github.com/user-attachments/assets/ca05290f-47c9-4f3f-acf7-eb84620f535c" />
 
 ## 功能特性
 
