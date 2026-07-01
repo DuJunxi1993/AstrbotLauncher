@@ -51,9 +51,9 @@ final class AstrBotController {
         _ = try processManager.start()
     }
 
-    /// 停止 AstrBot
+    /// 停止 AstrBot（真正等待进程退出，由 processManager.stop() 处理 SIGTERM + 兜底 SIGKILL）
     func stop() async {
-        processManager.stop()
+        await processManager.stop()
     }
 }
 

@@ -53,45 +53,105 @@ final class AstrBotProcessManager {
         return pid
     }
 
-    /// 停止 AstrBot
-    func stop() {
+    /// 停止 AstrBot（真正等待进程退出）
+    /// - SIGTERM → 等 5s（让 daemon 优雅退出）
+    /// - 兜底 SIGKILL → 再等 1s
+    /// - 进程确认死后才清 `knownPID`，避免后续 `pid` getter 走 pgrep fallback
+    func stop() async {
+        // 情况 A: 知道 PID（正常情况，本 app 启动的 AstrBot）
         if let pid = knownPID {
             kill(pid, SIGTERM)
-            // 5 秒后强杀
-            Task {
-                try? await Task.sleep(nanoseconds: 5_000_000_000)
-                if kill(pid, 0) == 0 {  // 进程仍在
-                    kill(pid, SIGKILL)
+
+            // 轮询等进程退出，最多 5 秒
+            var status: Int32 = 0
+            var elapsed: TimeInterval = 0
+            while elapsed < 5 {
+                let result = waitpid(pid, &status, WNOHANG)
+                if result == pid { break }  // 已退出
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                elapsed += 0.1
+            }
+
+            // 兜底：还没退出就 SIGKILL，再等 1s
+            if kill(pid, 0) == 0 {
+                AppLog.warn("AstrBot pid=\(pid) 未响应 SIGTERM，发送 SIGKILL")
+                kill(pid, SIGKILL)
+                elapsed = 0
+                while elapsed < 1 && kill(pid, 0) == 0 {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                    elapsed += 0.1
                 }
             }
-        } else {
-            // 不知道 PID，用 pkill
-            _ = ShellExecutor.runSync("/usr/bin/pkill", arguments: ["-f", "astrbot run"])
+
+            // 进程确认已退出，再清状态
+            knownPID = nil
+            startedByUs = false
+            AppLog.info("AstrBot stopped: pid=\(pid)")
+            return
         }
-        knownPID = nil
+
+        // 情况 B: 不知道 PID（孤儿 / 外部启动的 AstrBot）
+        _ = ShellExecutor.runSync("/usr/bin/pkill", arguments: ["-f", "astrbot run"])
+        try? await Task.sleep(nanoseconds: 1_000_000_000)  // 等 1s 让 pkill 生效
         startedByUs = false
+        AppLog.info("AstrBot stopped via pkill (no known PID)")
     }
 
-    /// 查询 AstrBot 是否在运行（pgrep）
+    /// 查询 AstrBot 是否在运行
+    /// 策略：
+    /// 1. 优先用已知 PID（knownPID）通过 `kill(pid, 0)` 检测（最可靠）
+    /// 2. Fallback：用具体路径 pgrep 查找（避免误匹配 "pkill -f 'astrbot run'" 等 shell 命令）
     func isRunning() -> Bool {
-        let result = ShellExecutor.runSync("/usr/bin/pgrep", arguments: ["-f", "astrbot run"])
-        // pgrep 在有匹配时返回 0（stdout 有内容）
-        if !result.success { return false }
-        // 排除自己（pgrep 自身）和 grep 进程
-        return result.stdout.split(separator: "\n").contains { line in
-            !line.contains("pgrep")
+        // 1. 优先用 knownPID 检测
+        if let pid = knownPID {
+            // kill(pid, 0) 成功（返回 0）表示进程存在
+            if kill(pid, 0) == 0 { return true }
+            // knownPID 已失效，清除
+            knownPID = nil
+            startedByUs = false
+            return false
         }
+
+        // 2. Fallback：用具体脚本路径查找（uv tool 安装路径）
+        //    避免字面匹配 `pkill -f "astrbot run"` 之类的 shell 命令
+        let home = NSHomeDirectory()
+        let candidates = [
+            "\(home)/.local/bin/astrbot run",        // uv tool 安装
+            "\(home)/.local/share/uv/tools/astrbot/bin/astrbot run",
+            "/usr/local/bin/astrbot run",             // Homebrew Intel
+            "/opt/homebrew/bin/astrbot run"          // Homebrew AS
+        ]
+        for pattern in candidates {
+            let result = ShellExecutor.runSync("/usr/bin/pgrep", arguments: ["-f", pattern])
+            if result.success, !result.stdout.isEmpty {
+                return true
+            }
+        }
+        return false
     }
 
     /// 获取 AstrBot 当前 PID
     func currentPID() -> pid_t? {
-        let result = ShellExecutor.runSync("/usr/bin/pgrep", arguments: ["-fn", "astrbot run"])
-        guard result.success else { return nil }
-        // 解析第一行：PID
-        guard let firstLine = result.stdout.split(separator: "\n").first else { return nil }
-        let parts = firstLine.split(separator: " ", omittingEmptySubsequences: true)
-        guard let pidStr = parts.first, let pid = pid_t(pidStr) else { return nil }
-        return pid > 0 ? pid : nil
+        // 优先用 knownPID
+        if let pid = knownPID, kill(pid, 0) == 0 {
+            return pid
+        }
+        // Fallback: 用具体路径查找
+        let home = NSHomeDirectory()
+        let candidates = [
+            "\(home)/.local/bin/astrbot run",
+            "\(home)/.local/share/uv/tools/astrbot/bin/astrbot run",
+            "/usr/local/bin/astrbot run",
+            "/opt/homebrew/bin/astrbot run"
+        ]
+        for pattern in candidates {
+            let result = ShellExecutor.runSync("/usr/bin/pgrep", arguments: ["-fn", pattern])
+            if result.success, let firstLine = result.stdout.split(separator: "\n").first {
+                let pidStr = firstLine.trimmingCharacters(in: .whitespaces).split(separator: " ").first ?? ""
+                if let pid = pid_t(pidStr), pid > 0 { return pid }
+            }
+        }
+        return nil
     }
 
     /// 获取所有 AstrBot 实例

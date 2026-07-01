@@ -4,6 +4,7 @@ import SwiftUI
 struct MainWindowView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var settings: AppSettings
+    @Environment(\.openWindow) private var openWindow
     @State private var selectedService: ServiceType?
     @Binding var showSettings: Bool
 
@@ -35,13 +36,6 @@ struct MainWindowView: View {
                 }
                 .help(appState.runningCount > 0 ? "停止全部服务" : "启动全部服务")
                 .disabled(appState.services.values.contains { $0.status == .starting || $0.status == .stopping })
-            }
-
-            // 可调间距：填充 .principal 区域把右侧按钮推到最右
-            ToolbarItem(placement: .principal) {
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: 1)
-                    .accessibilityHidden(true)
             }
 
             // 刷新
@@ -92,6 +86,12 @@ struct MainWindowView: View {
             SettingsSheet()
                 .environmentObject(settings)
                 .environmentObject(appState)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showMainWindow)) { _ in
+            // 菜单栏点击：先唤起 app，再用 openWindow 显示持久窗口
+            // （Window(id:) 关闭后 NSWindow 仍存活，openWindow 重新显示）
+            NSApp.activate(ignoringOtherApps: true)
+            openWindow(id: "main")
         }
         .onChange(of: selectedService) { _, newValue in
             if let newValue {

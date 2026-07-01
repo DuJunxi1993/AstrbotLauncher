@@ -32,12 +32,40 @@ cp "$BIN_PATH" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp "Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 
 # 复制图标
-if [ -f "astrbot_launcher.icns" ]; then
+# 优先用 macOS 14+ 的 .icon 文件夹格式（自动编译成 .icns）
+ICON_SOURCE_DIR="$HOME/Downloads/Astrbot_Launcher.icon"
+if [ -d "$ICON_SOURCE_DIR" ] && [ -f "$ICON_SOURCE_DIR/icon.json" ]; then
+    # 从 .icon 编译成 .icns（用 sips 生成多分辨率，iconutil 打包）
+    TMP_ICONSET=$(mktemp -d)
+    SRC_PNG="$ICON_SOURCE_DIR/Assets/astrbot_launcher.png"
+    if [ ! -f "$SRC_PNG" ] || [ $(sips -g pixelWidth "$SRC_PNG" 2>/dev/null | awk '{print $2}') -lt 256 ]; then
+        echo "    ⚠️ 源 PNG 太小（<256px），用现有 astrbot_launcher.icns"
+    else
+        sips --resampleWidth 16   "$SRC_PNG" --out "$TMP_ICONSET/icon_16x16.png"     > /dev/null
+        sips --resampleWidth 32   "$SRC_PNG" --out "$TMP_ICONSET/icon_16x16@2x.png"  > /dev/null
+        sips --resampleWidth 32   "$SRC_PNG" --out "$TMP_ICONSET/icon_32x32.png"     > /dev/null
+        sips --resampleWidth 64   "$SRC_PNG" --out "$TMP_ICONSET/icon_32x32@2x.png"  > /dev/null
+        sips --resampleWidth 128  "$SRC_PNG" --out "$TMP_ICONSET/icon_128x128.png"   > /dev/null
+        sips --resampleWidth 256  "$SRC_PNG" --out "$TMP_ICONSET/icon_128x128@2x.png" > /dev/null
+        sips --resampleWidth 256  "$SRC_PNG" --out "$TMP_ICONSET/icon_256x256.png"   > /dev/null
+        sips --resampleWidth 512  "$SRC_PNG" --out "$TMP_ICONSET/icon_256x256@2x.png" > /dev/null
+        sips --resampleWidth 512  "$SRC_PNG" --out "$TMP_ICONSET/icon_512x512.png"   > /dev/null
+        cp "$SRC_PNG" "$TMP_ICONSET/icon_512x512@2x.png"
+        iconutil --convert icns --output "$APP_BUNDLE/Contents/Resources/AppIcon.icns" "$TMP_ICONSET"
+        rm -rf "$TMP_ICONSET"
+        echo "    ✓ 图标已编译 (.icon → .icns)"
+        # 同时把最新的 .icns 复制到项目根，下次 build 优先用它
+        cp "$APP_BUNDLE/Contents/Resources/AppIcon.icns" "astrbot_launcher.icns"
+    fi
+fi
+# 优先用 Pictures 里的新 .icns（如果存在且大于 50KB）
+PICTURES_ICNS="$HOME/Pictures/icons/astrbot_launcher.icns"
+if [ -f "$PICTURES_ICNS" ] && [ $(stat -f "%z" "$PICTURES_ICNS" 2>/dev/null) -gt 50000 ]; then
+    cp "$PICTURES_ICNS" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+    echo "    ✓ 图标已复制 (~/Pictures/icons/astrbot_launcher.icns)"
+elif [ -f "astrbot_launcher.icns" ]; then
     cp "astrbot_launcher.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
-    echo "    ✓ 图标已复制"
-elif [ -f "Resources/astrbot_launcher.icns" ]; then
-    cp "Resources/astrbot_launcher.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
-    echo "    ✓ 图标已复制 (Resources/)"
+    echo "    ✓ 图标已复制 (.icns 缓存)"
 fi
 
 # 设置可执行权限

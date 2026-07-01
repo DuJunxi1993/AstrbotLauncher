@@ -31,7 +31,10 @@ struct AstrbotLauncherApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("AstrBot Launcher") {
+        // 用 Window(id:) 而非 WindowGroup —— WindowGroup 的窗口在关闭后会被销毁，
+        // 导致 NSApp.windows 找不到窗口，菜单栏点击无效。Window(id:) 是持久单窗口，
+        // 关闭后仍可通过 openWindow(id:) 重新显示。
+        Window("AstrBot Launcher", id: "main") {
             MainWindowView(showSettings: $showSettings)
                 .environmentObject(appState)
                 .environmentObject(settings)

@@ -56,13 +56,19 @@ final class MenuBarController: ObservableObject {
     }
 
     private func toggleMainWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+
+        // 找到持久窗口（Window(id:) 创建的窗口关闭后仍存在）
         if let window = NSApp.windows.first(where: { $0.title.contains("AstrBot") }) {
             if window.isVisible && window.isKeyWindow {
                 window.orderOut(nil)
-            } else {
-                window.makeKeyAndOrderFront(nil)
-                NSApp.activate(ignoringOtherApps: true)
+                return
             }
+            // 让 SwiftUI 通过 openWindow 重新显示（处理所有边缘情况）
+            NotificationCenter.default.post(name: .showMainWindow, object: nil)
+        } else {
+            // 兜底：post 通知让 SwiftUI 通过 openWindow 重新创建窗口
+            NotificationCenter.default.post(name: .showMainWindow, object: nil)
         }
     }
 
@@ -192,10 +198,8 @@ final class MenuBarController: ObservableObject {
     }
 
     @objc private func menuShowWindow() {
-        if let window = NSApp.windows.first(where: { $0.title.contains("AstrBot") }) {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-        }
+        // 通过通知统一路径（与左键点击处理一致）
+        NotificationCenter.default.post(name: .showMainWindow, object: nil)
     }
 
     @objc private func menuQuit() {

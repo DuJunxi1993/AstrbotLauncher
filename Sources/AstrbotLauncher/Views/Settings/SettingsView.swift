@@ -117,6 +117,12 @@ struct SettingsSheet: View {
                 )
 
                 SettingsToggleRow(
+                    title: "启动时自动运行全部服务",
+                    description: "打开 app 时自动启动 AstrBot / NapCat / Shipyard",
+                    isOn: $settings.autoStartAllServices
+                )
+
+                SettingsToggleRow(
                     title: "服务状态通知",
                     description: "服务启停时显示系统通知",
                     isOn: $settings.enableNotifications

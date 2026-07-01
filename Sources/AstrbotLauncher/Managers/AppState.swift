@@ -38,8 +38,19 @@ final class AppState: ObservableObject {
         }
         // 注册 WebUI URL 监听
         setupWebUIListener()
-        // 初始加载
-        Task { await initialSetup() }
+        // 初始加载 + 启动时自动运行全部服务
+        Task {
+            await initialSetup()
+            if AppSettings.shared.autoStartAllServices {
+                AppLog.info("启动时自动运行全部服务")
+                await startAll()
+                let count = runningCount
+                NotificationManager.shared.send(
+                    title: "服务已自动启动",
+                    body: "\(count) / \(totalCount) 个服务运行中"
+                )
+            }
+        }
     }
 
     // 缓存：避免每次 refreshStatus 都调 docker inspect
@@ -335,13 +346,16 @@ final class AppState: ObservableObject {
     }
 
     func restartService(_ type: ServiceType) async {
-        await stopService(type)
-        try? await Task.sleep(nanoseconds: 500_000_000)
-        await startService(type)
+        // 重启是显式重置操作：跳过 canStop / canStart 守卫
+        // 资源释放靠 processManager.stop() 的 waitpid 等待保证，不需要 sleep
+        await stopService(type, force: true)
+        await startService(type, force: true)
     }
 
     func startAll() async {
-        for type in [ServiceType.napcat, .shipyard, .astrbot] {
+        // 启动顺序：AstrBot → NapCat → Shipyard
+        // （docker start 本身是并行的，但顺序声明可让 UI 启动状态稳定）
+        for type in [ServiceType.astrbot, .napcat, .shipyard] {
             await startService(type, force: true)
         }
     }

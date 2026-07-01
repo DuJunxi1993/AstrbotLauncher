@@ -21,6 +21,7 @@ final class AppSettings: ObservableObject {
         static let pollingInterval = "pollingInterval"
         static let autoStartOnBoot = "autoStartOnBoot"
         static let startMinimized = "startMinimized"
+        static let autoStartAllServices = "autoStartAllServices"
         static let manualComposePaths = "manualComposePaths"
         static let themeMode = "themeMode"
         static let enableNotifications = "enableNotifications"
@@ -93,6 +94,11 @@ final class AppSettings: ObservableObject {
         didSet { store.set(startMinimized, forKey: Key.startMinimized) }
     }
 
+    /// 启动时自动运行全部服务（默认 true，对老用户首次启动生效）
+    @Published var autoStartAllServices: Bool {
+        didSet { store.set(autoStartAllServices, forKey: Key.autoStartAllServices) }
+    }
+
     @Published var themeMode: ThemeMode {
         didSet { store.set(themeMode.rawValue, forKey: Key.themeMode) }
     }
@@ -102,6 +108,9 @@ final class AppSettings: ObservableObject {
     }
 
     private init() {
+        // 注册默认值：让老用户首次启动也能享受 autoStartAllServices = true
+        store.register(defaults: [Key.autoStartAllServices: true])
+
         // AstrBot
         let modeRaw = store.string(forKey: Key.astrBotLaunchMode) ?? AstrBotLaunchMode.uvToolRun.rawValue
         self.astrBotLaunchMode = AstrBotLaunchMode(rawValue: modeRaw) ?? .uvToolRun
@@ -150,6 +159,7 @@ final class AppSettings: ObservableObject {
         self.pollingInterval = interval > 0 ? interval : 5
         self.autoStartOnBoot = store.bool(forKey: Key.autoStartOnBoot)
         self.startMinimized = store.bool(forKey: Key.startMinimized)
+        self.autoStartAllServices = store.bool(forKey: Key.autoStartAllServices)
 
         let themeRaw = store.string(forKey: Key.themeMode) ?? ThemeMode.system.rawValue
         self.themeMode = ThemeMode(rawValue: themeRaw) ?? .system
